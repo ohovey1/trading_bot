@@ -2,7 +2,7 @@ import json
 import pickle
 from pathlib import Path
 
-MODELS_DIR = Path("models")
+MODELS_DIR = Path(__file__).resolve().parent
 
 
 def _next_version() -> int:

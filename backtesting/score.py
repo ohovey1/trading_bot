@@ -1,12 +1,14 @@
 """
 Retrospective scoring of closed signals and historical model validation.
 """
+from pathlib import Path
+
 import pandas as pd
 import sqlalchemy as sa
 
 from data.schema import signals as signals_table, outcomes as outcomes_table, metadata
 
-DB_PATH = "data/trading.db"
+DB_PATH = str(Path(__file__).resolve().parent.parent / "data" / "trading.db")
 
 _REQUIRED_KEYS = {
     "total_signals",

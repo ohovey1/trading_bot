@@ -3,6 +3,7 @@ Resolves open signals by checking if their hold period has elapsed
 and computing actual returns from market data.
 """
 import datetime
+from pathlib import Path
 
 import pandas as pd
 import sqlalchemy as sa
@@ -10,7 +11,7 @@ from pandas.tseries.offsets import BDay
 
 from data.schema import market_data, signals as signals_table, outcomes as outcomes_table, metadata
 
-DB_PATH = "data/trading.db"
+DB_PATH = str(Path(__file__).resolve().parent.parent / "data" / "trading.db")
 EXPECTED_HOLD_DAYS_DEFAULT = 10
 
 
