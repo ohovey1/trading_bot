@@ -1,1 +1,11 @@
 .orchestrator/
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+data/trading.db
+models/*.pkl
+.env
+*.egg-info/
+dist/
+.pytest_cache/
