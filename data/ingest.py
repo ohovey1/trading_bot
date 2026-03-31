@@ -26,6 +26,7 @@ def fetch_ohlcv(
         auto_adjust=True,
         progress=False,
         threads=True,
+        timeout=30,  # prevent indefinite hang if Yahoo Finance is unresponsive
     )
 
     if raw.empty:
