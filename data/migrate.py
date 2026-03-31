@@ -24,6 +24,20 @@ def add_missing_columns(db_path: str = DB_PATH) -> None:
 
         conn.commit()
 
+    # outcomes table migrations
+    with engine.connect() as conn:
+        result = conn.execute(sa.text("PRAGMA table_info(outcomes)"))
+        existing = {row[1] for row in result}
+
+        if "exit_price" not in existing:
+            # outcomes may not exist yet in older DBs — only migrate if it does
+            result = conn.execute(
+                sa.text("SELECT name FROM sqlite_master WHERE type='table' AND name='outcomes'")
+            )
+            if result.fetchone():
+                conn.execute(sa.text("ALTER TABLE outcomes ADD COLUMN exit_price REAL"))
+                conn.commit()
+
 
 if __name__ == "__main__":
     add_missing_columns()

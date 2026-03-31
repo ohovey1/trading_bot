@@ -45,4 +45,5 @@ outcomes = sa.Table(
     sa.Column("resolved_at", sa.DateTime, nullable=False),
     sa.Column("outcome", sa.String, nullable=False),       # win / loss / neutral
     sa.Column("pct_return", sa.Float, nullable=False),
+    sa.Column("exit_price", sa.Float, nullable=True),
 )
