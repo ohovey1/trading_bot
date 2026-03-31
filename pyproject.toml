@@ -8,6 +8,8 @@ dependencies = [
     "scikit-learn>=1.4",
     "prefect>=2.0",
     "sqlalchemy>=2.0",
+    "streamlit>=1.40.0",
+    "plotly>=5.0",
 ]
 
 [project.optional-dependencies]
