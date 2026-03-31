@@ -33,6 +33,8 @@ signals = sa.Table(
     sa.Column("confidence", sa.Float, nullable=False),     # 0.0 – 1.0
     sa.Column("model_version", sa.String, nullable=False),
     sa.Column("status", sa.String, nullable=False, server_default="open"),  # open / closed
+    sa.Column("expected_hold_time", sa.Integer, nullable=True),  # trading days
+    sa.Column("notes", sa.String, nullable=True),
 )
 
 outcomes = sa.Table(
