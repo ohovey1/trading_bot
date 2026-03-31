@@ -16,7 +16,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["data", "signals", "models", "pipeline", "backtesting"]
+packages = ["data", "signals", "models", "modeling", "pipeline", "backtesting"]
 
 [build-system]
 requires = ["hatchling"]
