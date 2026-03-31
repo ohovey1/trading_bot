@@ -2,14 +2,17 @@
 Persists normalized OHLCV data into the SQLite market_data table.
 """
 import datetime
+from pathlib import Path
 
 import pandas as pd
 import sqlalchemy as sa
 
 from data.schema import market_data, metadata
 
+_DEFAULT_DB = str(Path(__file__).resolve().parent / "trading.db")
 
-def store_market_data(df: pd.DataFrame, db_path: str = "data/trading.db") -> int:
+
+def store_market_data(df: pd.DataFrame, db_path: str = _DEFAULT_DB) -> int:
     """Upsert rows into market_data, skipping duplicates on (ticker, date).
 
     Returns the count of newly inserted rows.

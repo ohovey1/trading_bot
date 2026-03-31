@@ -2,9 +2,11 @@
 Database migrations for the trading signal system.
 Run directly or import add_missing_columns() to apply schema changes safely.
 """
+from pathlib import Path
+
 import sqlalchemy as sa
 
-DB_PATH = "data/trading.db"
+DB_PATH = str(Path(__file__).resolve().parent / "trading.db")
 
 
 def add_missing_columns(db_path: str = DB_PATH) -> None:

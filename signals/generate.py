@@ -14,8 +14,9 @@ from models import registry
 
 CONFIDENCE_THRESHOLD = 0.55
 EXPECTED_HOLD_DAYS = 10
-MODELS_DIR = Path("models")
-DB_PATH = "data/trading.db"
+_ROOT = Path(__file__).resolve().parent.parent
+MODELS_DIR = _ROOT / "models"
+DB_PATH = str(_ROOT / "data" / "trading.db")
 
 
 def _load_model_with_version():

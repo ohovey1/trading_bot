@@ -10,10 +10,12 @@ from pathlib import Path
 from backtesting.resolve import resolve_outcomes
 from backtesting.score import score_signals
 
-OUTPUT_PATH = Path("backtesting/latest_backtest.json")
+_ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_PATH = Path(__file__).resolve().parent / "latest_backtest.json"
+_DEFAULT_DB = str(_ROOT / "data" / "trading.db")
 
 
-def main(db_path: str = "data/trading.db") -> None:
+def main(db_path: str = _DEFAULT_DB) -> None:
     resolved = resolve_outcomes(db_path=db_path)
     print(f"Resolved {resolved} signal(s).")
 
