@@ -1,0 +1,22 @@
+{
+  "version": "v1",
+  "features": [
+    "sma_10",
+    "sma_30",
+    "sma_ratio",
+    "rsi_14",
+    "volume_ratio",
+    "atr_14",
+    "price_change_5d",
+    "close_vs_high_20"
+  ],
+  "label_forward_days": 10,
+  "label_threshold_pct": 3.0,
+  "train_accuracy": 0.6658,
+  "train_roc_auc": 0.5865,
+  "train_n": 16902,
+  "test_accuracy": 0.6619,
+  "test_roc_auc": 0.5192,
+  "test_n": 4226,
+  "training_date": "2026-03-31T03:53:26.553808"
+}

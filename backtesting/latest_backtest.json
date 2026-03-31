@@ -1,0 +1,13 @@
+{
+  "total_signals": 0,
+  "win_rate": 0.0,
+  "loss_rate": 0.0,
+  "neutral_rate": 0.0,
+  "avg_pct_return": 0.0,
+  "avg_win_return": 0.0,
+  "avg_loss_return": 0.0,
+  "sharpe_approx": 0.0,
+  "best_ticker": "",
+  "worst_ticker": "",
+  "by_model_version": {}
+}
