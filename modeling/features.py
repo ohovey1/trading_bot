@@ -1,28 +1,18 @@
-import sqlalchemy as sa
 import pandas as pd
 
-from data.schema import market_data, metadata
-
-FORWARD_DAYS = 5
-LABEL_THRESHOLD = 0.02
-
 FEATURE_COLS = [
-    "return_1d",
-    "return_5d",
-    "return_10d",
-    "vol_ratio_5d",
-    "price_to_ma5",
-    "price_to_ma10",
+    "sma_10",
+    "sma_30",
+    "sma_ratio",
     "rsi_14",
+    "volume_ratio",
+    "atr_14",
+    "price_change_5d",
+    "close_vs_high_20",
 ]
 
-
-def load_market_data(db_path: str = "data/trading.db") -> pd.DataFrame:
-    engine = sa.create_engine(f"sqlite:///{db_path}")
-    metadata.create_all(engine)
-    with engine.connect() as conn:
-        rows = conn.execute(sa.select(market_data)).fetchall()
-    return pd.DataFrame(rows, columns=[c.name for c in market_data.columns])
+FORWARD_DAYS = 10
+LABEL_THRESHOLD = 0.03
 
 
 def _rsi(series: pd.Series, window: int = 14) -> pd.Series:
@@ -33,46 +23,45 @@ def _rsi(series: pd.Series, window: int = 14) -> pd.Series:
     return 100 - (100 / (1 + rs))
 
 
+def _atr(df: pd.DataFrame, window: int = 14) -> pd.Series:
+    high = df["high"]
+    low = df["low"]
+    prev_close = df["close"].shift(1)
+    tr = pd.concat(
+        [high - low, (high - prev_close).abs(), (low - prev_close).abs()], axis=1
+    ).max(axis=1)
+    return tr.rolling(window).mean()
+
+
 def build_features(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.sort_values(["ticker", "date"]).copy()
+    """Build features and label for a per-ticker OHLCV DataFrame.
+
+    Returns a DataFrame with FEATURE_COLS + 'label'. The last FORWARD_DAYS rows
+    per ticker are dropped to prevent future data leakage.
+    """
     parts = []
     for _, grp in df.groupby("ticker", sort=False):
         g = grp.sort_values("date").copy()
-        g["return_1d"] = g["close"].pct_change(1)
-        g["return_5d"] = g["close"].pct_change(5)
-        g["return_10d"] = g["close"].pct_change(10)
-        g["vol_ratio_5d"] = g["volume"] / g["volume"].rolling(5).mean()
-        g["price_to_ma5"] = g["close"] / g["close"].rolling(5).mean() - 1
-        g["price_to_ma10"] = g["close"] / g["close"].rolling(10).mean() - 1
+
+        g["sma_10"] = g["close"].rolling(10).mean()
+        g["sma_30"] = g["close"].rolling(30).mean()
+        g["sma_ratio"] = g["sma_10"] / g["sma_30"]
         g["rsi_14"] = _rsi(g["close"], 14)
-        parts.append(g)
-    out = pd.concat(parts, ignore_index=True)
-    out = out.dropna(subset=FEATURE_COLS)
-    return out[["ticker", "date", "close"] + FEATURE_COLS].reset_index(drop=True)
+        g["volume_ratio"] = g["volume"] / g["volume"].rolling(20).mean()
+        g["atr_14"] = _atr(g, 14)
+        g["price_change_5d"] = (g["close"] - g["close"].shift(5)) / g["close"].shift(5)
+        g["close_vs_high_20"] = g["close"] / g["close"].rolling(20).max()
 
-
-def build_labels(
-    df: pd.DataFrame,
-    forward_days: int = FORWARD_DAYS,
-    threshold: float = LABEL_THRESHOLD,
-) -> pd.DataFrame:
-    parts = []
-    for _, grp in df.groupby("ticker", sort=False):
-        g = grp.sort_values("date").copy()
-        g["_future_close"] = g["close"].shift(-forward_days)
-        g = g.dropna(subset=["_future_close"])
-        g["label"] = (g["_future_close"] >= g["close"] * (1 + threshold)).astype(int)
+        # Label: 1 if close FORWARD_DAYS ahead is >= LABEL_THRESHOLD higher
+        g["_future_close"] = g["close"].shift(-FORWARD_DAYS)
+        g["label"] = (g["_future_close"] >= g["close"] * (1 + LABEL_THRESHOLD)).astype(int)
         g = g.drop(columns=["_future_close"])
+
+        # Drop last FORWARD_DAYS rows (no future close available) and NaN feature rows
+        g = g.iloc[:-FORWARD_DAYS]
+        g = g.dropna(subset=FEATURE_COLS)
+
         parts.append(g)
-    return pd.concat(parts, ignore_index=True)
 
-
-def build_labeled_dataset(
-    db_path: str = "data/trading.db",
-) -> tuple[pd.DataFrame, pd.Series]:
-    raw = load_market_data(db_path)
-    if raw.empty:
-        raise ValueError("No market data found in database. Run ingestion first.")
-    features = build_features(raw)
-    labeled = build_labels(features)
-    return labeled[FEATURE_COLS], labeled["label"]
+    out = pd.concat(parts, ignore_index=True)
+    return out[["ticker", "date", "close"] + FEATURE_COLS + ["label"]].reset_index(drop=True)

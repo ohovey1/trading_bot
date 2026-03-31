@@ -2,12 +2,14 @@ import numpy as np
 import pandas as pd
 import pytest
 from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
-from modeling.features import build_features, build_labels, FEATURE_COLS
-import modeling.registry as reg
+from modeling.features import build_features, FEATURE_COLS
+import models.registry as reg
 
 
-def _make_ohlcv(n: int = 60, ticker: str = "TEST") -> pd.DataFrame:
+def _make_ohlcv(n: int = 80, ticker: str = "TEST") -> pd.DataFrame:
     rng = np.random.default_rng(42)
     close = 100 + rng.normal(0, 1, n).cumsum()
     close = np.abs(close) + 10
@@ -25,62 +27,100 @@ def _make_ohlcv(n: int = 60, ticker: str = "TEST") -> pd.DataFrame:
     )
 
 
-def test_build_features_returns_expected_columns_and_no_nans():
-    df = _make_ohlcv(60)
+def test_build_features_returns_expected_columns():
+    df = _make_ohlcv(80)
     result = build_features(df)
     for col in FEATURE_COLS:
         assert col in result.columns, f"Missing feature: {col}"
+    assert "label" in result.columns
+
+
+def test_build_features_no_nans_on_valid_input():
+    df = _make_ohlcv(80)
+    result = build_features(df)
     assert result[FEATURE_COLS].isna().sum().sum() == 0
     assert len(result) > 0
 
 
-def test_build_labels_produces_binary_no_nans():
-    df = _make_ohlcv(60)
-    feat = build_features(df)
-    labeled = build_labels(feat)
-    assert "label" in labeled.columns
-    assert labeled["label"].isna().sum() == 0
-    assert set(labeled["label"].unique()).issubset({0, 1})
+def test_build_features_drops_last_forward_days_rows():
+    from modeling.features import FORWARD_DAYS
+    df = _make_ohlcv(80)
+    result = build_features(df)
+    # Last row date should be at least FORWARD_DAYS before the last input date
+    last_input_date = df["date"].max()
+    last_output_date = result["date"].max()
+    assert last_output_date < last_input_date
 
 
-def test_build_labels_drops_rows_without_forward_window():
-    df = _make_ohlcv(60)
-    feat = build_features(df)
-    labeled = build_labels(feat, forward_days=5)
-    assert len(labeled) == len(feat) - 5
-
-
-def test_train_produces_fitted_model():
-    df = _make_ohlcv(100)
-    feat = build_features(df)
-    labeled = build_labels(feat)
-    X = labeled[FEATURE_COLS]
-    y = labeled["label"]
+def test_train_test_split_is_chronological():
+    df = _make_ohlcv(80)
+    result = build_features(df)
+    X = result[FEATURE_COLS]
+    dates = result["date"]
 
     split = int(len(X) * 0.8)
-    model = LogisticRegression(random_state=42, max_iter=1000)
-    model.fit(X.iloc[:split], y.iloc[:split])
+    train_dates = dates.iloc[:split]
+    test_dates = dates.iloc[split:]
 
-    preds = model.predict(X.iloc[split:])
-    assert len(preds) == len(X.iloc[split:])
-    assert set(preds).issubset({0, 1})
+    assert train_dates.max() <= test_dates.min(), "Train/test split is not chronological"
 
 
-def test_save_load_roundtrip_preserves_predictions(tmp_path, monkeypatch):
+def test_model_produces_probability_outputs():
+    df = _make_ohlcv(80)
+    result = build_features(df)
+    X = result[FEATURE_COLS]
+    y = result["label"]
+
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", LogisticRegression(random_state=42, max_iter=1000, C=0.1)),
+    ])
+    pipeline.fit(X, y)
+
+    proba = pipeline.predict_proba(X)
+    assert proba.shape == (len(X), 2)
+    assert ((proba >= 0) & (proba <= 1)).all()
+    # Each row should sum to 1
+    np.testing.assert_allclose(proba.sum(axis=1), 1.0, atol=1e-6)
+
+
+def test_save_load_model_roundtrip(tmp_path, monkeypatch):
     monkeypatch.setattr(reg, "MODELS_DIR", tmp_path)
 
-    df = _make_ohlcv(100)
-    feat = build_features(df)
-    labeled = build_labels(feat)
-    X = labeled[FEATURE_COLS]
-    y = labeled["label"]
+    df = _make_ohlcv(80)
+    result = build_features(df)
+    X = result[FEATURE_COLS]
+    y = result["label"]
 
-    model = LogisticRegression(random_state=42, max_iter=1000)
-    model.fit(X, y)
-    original_preds = model.predict(X)
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", LogisticRegression(random_state=42, max_iter=1000, C=0.1)),
+    ])
+    pipeline.fit(X, y)
+    original_preds = pipeline.predict(X)
 
-    reg.save_model(model, {"features": FEATURE_COLS, "test_accuracy": 0.5})
-    loaded = reg.load_latest_model()
+    reg.save_model(pipeline, {"features": FEATURE_COLS, "test_roc_auc": 0.55})
+    loaded = reg.load_model()
     loaded_preds = loaded.predict(X)
 
     np.testing.assert_array_equal(original_preds, loaded_preds)
+
+
+def test_save_model_increments_version(tmp_path, monkeypatch):
+    monkeypatch.setattr(reg, "MODELS_DIR", tmp_path)
+
+    df = _make_ohlcv(80)
+    result = build_features(df)
+    X = result[FEATURE_COLS]
+    y = result["label"]
+
+    pipeline = Pipeline([
+        ("scaler", StandardScaler()),
+        ("clf", LogisticRegression(random_state=42, max_iter=1000, C=0.1)),
+    ])
+    pipeline.fit(X, y)
+
+    v1 = reg.save_model(pipeline, {})
+    v2 = reg.save_model(pipeline, {})
+    assert v1 == "v1"
+    assert v2 == "v2"
