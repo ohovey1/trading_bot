@@ -1,0 +1,17 @@
+{
+  "version": "v20260331_022019",
+  "features": [
+    "return_1d",
+    "return_5d",
+    "return_10d",
+    "vol_ratio_5d",
+    "price_to_ma5",
+    "price_to_ma10",
+    "rsi_14"
+  ],
+  "label_forward_days": 5,
+  "label_threshold_pct": 2.0,
+  "train_accuracy": 0.7322834645669292,
+  "test_accuracy": 0.90625,
+  "training_date": "2026-03-31T02:20:19.223396"
+}
