@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from pandas.tseries.offsets import BDay
 
 from data.schema import market_data, metadata
-from modeling.features import build_features, FEATURE_COLS
+from modeling.features import build_features
 from models import registry
 
 CONFIDENCE_THRESHOLD = 0.55
@@ -29,7 +29,7 @@ def _load_model_with_version():
     with open(jsons[-1]) as f:
         meta = json.load(f)
     pipeline = registry.load_model()
-    return pipeline, meta["version"]
+    return pipeline, meta["version"], meta["features"]
 
 
 def simulate_historical_signals(db_path: str = DB_PATH) -> list[dict]:
@@ -41,7 +41,7 @@ def simulate_historical_signals(db_path: str = DB_PATH) -> list[dict]:
 
     Returns a list of resolved signal dicts. Does NOT write to the database.
     """
-    pipeline, version = _load_model_with_version()
+    pipeline, version, feature_cols = _load_model_with_version()
 
     engine = sa.create_engine(f"sqlite:///{db_path}")
     metadata.create_all(engine)
@@ -64,7 +64,7 @@ def simulate_historical_signals(db_path: str = DB_PATH) -> list[dict]:
 
     results = []
     for _, row in features_df.iterrows():
-        X = row[FEATURE_COLS].to_frame().T
+        X = row[feature_cols].to_frame().T
         proba = float(pipeline.predict_proba(X)[0][1])
 
         if proba < CONFIDENCE_THRESHOLD:
