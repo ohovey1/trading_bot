@@ -63,7 +63,7 @@ features = pd.DataFrame([
     {"Feature": "close_vs_high_20", "Type": "Strength",   "Description": "close / 20-day rolling high; proximity to recent peak (1.0 = at the high)"},
 ])
 
-st.dataframe(features, use_container_width=True, hide_index=True)
+st.dataframe(features, width='stretch', hide_index=True)
 
 # --- Label definition ---
 st.subheader("Label Definition")
@@ -103,7 +103,7 @@ else:
         })
 
     comparison_df = pd.DataFrame(rows)
-    st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+    st.dataframe(comparison_df, width='stretch', hide_index=True)
 
     # Grouped bar chart: Test Accuracy vs Test ROC-AUC per version
     chart_df = comparison_df[["Version", "Test Accuracy", "Test ROC-AUC"]].melt(
@@ -123,7 +123,7 @@ else:
         color_discrete_map={"Test Accuracy": "#3498db", "Test ROC-AUC": "#e67e22"},
     )
     fig.update_yaxes(range=[0, 1])
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 st.divider()
 
