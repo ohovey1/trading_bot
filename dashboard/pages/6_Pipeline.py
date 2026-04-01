@@ -58,7 +58,7 @@ schedule = pd.DataFrame([
     },
 ])
 
-st.dataframe(schedule, use_container_width=True, hide_index=True)
+st.dataframe(schedule, width='stretch', hide_index=True)
 
 # --- Re-evaluation loop ---
 st.subheader("Re-evaluation Loop")

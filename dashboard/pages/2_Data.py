@@ -64,7 +64,7 @@ else:
         "max_date": "Last Date",
         "delisted": "Delisted",
     })
-    st.dataframe(display, use_container_width=True, hide_index=True)
+    st.dataframe(display, width='stretch', hide_index=True)
 
 # --- Sample data preview ---
 st.subheader("Sample Data Preview")
@@ -84,7 +84,7 @@ else:
             for col in ["open", "high", "low", "close"]:
                 if col in df.columns:
                     df[col] = df[col].round(2)
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(df, width='stretch', hide_index=True)
 
 # --- Data quality notes ---
 st.subheader("Data Quality Notes")

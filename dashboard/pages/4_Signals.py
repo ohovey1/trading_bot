@@ -120,7 +120,7 @@ else:
         return colors.get(val, "")
 
     styled = open_df.style.map(_rec_color, subset=["Recommendation"])
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    st.dataframe(styled, width='stretch', hide_index=True)
 
 st.divider()
 
@@ -138,7 +138,7 @@ if outcomes_df.empty:
         st.dataframe(
             closed[["ticker", "generated_at", "entry_price", "target_price", "stop_loss",
                     "confidence", "model_version"]].sort_values("generated_at", ascending=False),
-            use_container_width=True,
+            width='stretch',
             hide_index=True,
         )
 else:
@@ -147,7 +147,7 @@ else:
     perf_df = outcomes_df[perf_cols].copy()
     if "pct_return" in perf_df.columns:
         perf_df["pct_return"] = perf_df["pct_return"].round(2)
-    st.dataframe(perf_df.sort_values("generated_at", ascending=False), use_container_width=True, hide_index=True)
+    st.dataframe(perf_df.sort_values("generated_at", ascending=False), width='stretch', hide_index=True)
 
     # Summary stats
     total = len(outcomes_df)
@@ -182,7 +182,7 @@ else:
             text_auto=".0%",
         )
         fig.update_yaxes(tickformat=".0%", range=[0, 1])
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
 
 st.divider()
 
@@ -202,7 +202,7 @@ with st.expander("Signal Schema Reference"):
         {"Column": "expected_hold_time", "Type": "INTEGER", "Description": "Expected holding period in trading days (10)"},
         {"Column": "notes",              "Type": "TEXT",    "Description": "Optional free-text notes"},
     ])
-    st.dataframe(schema, use_container_width=True, hide_index=True)
+    st.dataframe(schema, width='stretch', hide_index=True)
 
     st.markdown("""
 **Generation logic**

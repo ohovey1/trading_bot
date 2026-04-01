@@ -168,7 +168,7 @@ if "resolved_at" in filtered.columns and "pct_return" in filtered.columns:
         title="Equity Curve ($1,000/signal)",
         labels={"resolved_at": "Date", "cumulative": "Portfolio Value ($)"},
     )
-    st.plotly_chart(fig_eq, use_container_width=True)
+    st.plotly_chart(fig_eq, width='stretch')
 
 # --- Win/loss/neutral pie + per-ticker win rate ---
 col_left, col_right = st.columns(2)
@@ -190,7 +190,7 @@ with col_left:
         color="outcome",
         color_discrete_map=color_map,
     )
-    st.plotly_chart(fig_pie, use_container_width=True)
+    st.plotly_chart(fig_pie, width='stretch')
 
 with col_right:
     st.subheader("Win Rate by Ticker")
@@ -216,7 +216,7 @@ with col_right:
         text_auto=".0%",
     )
     fig_bar.update_yaxes(tickformat=".0%")
-    st.plotly_chart(fig_bar, use_container_width=True)
+    st.plotly_chart(fig_bar, width='stretch')
 
 # --- Confidence vs. return scatter ---
 st.subheader("Confidence vs. Return")
@@ -240,4 +240,4 @@ if "confidence" in filtered.columns and "pct_return" in filtered.columns:
         hover_data=hover_cols,
     )
     fig_scatter.add_hline(y=0, line_dash="dash", line_color="gray")
-    st.plotly_chart(fig_scatter, use_container_width=True)
+    st.plotly_chart(fig_scatter, width='stretch')
