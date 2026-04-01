@@ -1,0 +1,28 @@
+{
+  "version": "v2",
+  "algorithm": "LogisticRegression",
+  "features": [
+    "macd_line",
+    "macd_signal",
+    "obv",
+    "volume_price_trend",
+    "price_change_3d",
+    "price_change_7d",
+    "rsi_14",
+    "volume_ratio"
+  ],
+  "hyperparameters": {
+    "C": 0.1,
+    "random_state": 42,
+    "max_iter": 1000
+  },
+  "label_forward_days": 10,
+  "label_threshold_pct": 3.0,
+  "train_accuracy": 0.6395,
+  "train_roc_auc": 0.5372,
+  "train_n": 54723,
+  "test_accuracy": 0.6378,
+  "test_roc_auc": 0.5334,
+  "test_n": 13681,
+  "training_date": "2026-04-01T03:55:51.751642"
+}
