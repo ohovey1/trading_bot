@@ -1,36 +1,51 @@
-# Phase 1 Universe Summary — Handoff to ml-engineer
+# Ticker Universe Summary
+
+## Source
+
+- **ETF**: iShares Russell 2000 ETF (IWM) holdings CSV
+- **URL**: https://www.ishares.com/us/products/239710/ishares-russell-2000-etf (public download)
+- **Holdings date**: Mar 30, 2026
+- **Generated**: 2026-04-01
 
 ## Selection Criteria
 
-- ~50 liquid small-cap US equities from the Russell 2000 universe
-- Market cap range: $300M–$2B at time of curation
-- Average daily volume: >500,000 shares
-- Exchange: NYSE or NASDAQ only (no OTC/pink sheets)
-- Excluded: financials (banks, REITs), pre-revenue biotech (high binary event risk)
-- Source: manually curated from public Russell 2000 constituent lists
+- **Index**: Russell 2000 constituents (via IWM holdings)
+- **Market cap filter**: $300M–$2B (inclusive, using `yfinance` live data at generation time)
+- **Ticker format**: Pure alphabetic only (no dots, dashes, or suffixes) — required by data schema
+- **Exchange**: No additional exchange filter; IWM holds NYSE and NASDAQ names
+
+## Rationale
+
+IWM is a full-replication ETF tracking the Russell 2000 index. Downloading its holdings CSV from iShares gives a reliable, reproducible Russell 2000 constituent list without requiring a paid data provider. Market caps were fetched via the Yahoo Finance v7 quote API and used to filter the ~1,940-ticker IWM universe down to the $300M–$2B small-cap band. Tickers with non-alpha characters (e.g., BRK/B, BF.B) are excluded to match the project's ticker format constraint.
+
+To preserve data continuity, tickers already present in the previous universe that remain within the $300M–$2B range were retained first. New tickers were added to fill up to the 150-ticker cap.
 
 ## Final Universe
 
-- **Tickers in universe file:** 50
-- **Tickers with data:** 46 (92%)
-- **Tickers flagged insufficient (<200 rows):** 4 (AMED, CATS, COMM, COOP — all returned no data from yfinance, likely delisted or unavailable)
+- **Tickers in universe file**: 150
+- **Market cap range at generation**: ~$303M – ~$2,000M
+- **Carried over from previous universe**: 21 (still within $300M–$2B)
+- **New tickers added**: 129
+- **Removed from previous universe**: 29 (grew above $2B or fell below $300M)
+
+Tickers removed from prior universe (no longer in $300M–$2B range):
+AEIS, AMED, ANIK, ARCB, AROC, BANF, BCC, BCPC, BDC, BFAM, BOOT, BRC, CALC, CALF, CARG, CATS, CBT, CHEF, CHGG, CLAR, CNXC, COMM, COOP, CORT, CPRX, CRGY, CTRE, CURB, CVCO
 
 ## Data in SQLite
 
-- **Table:** `market_data`
-- **Date range:** 2024-04-01 to 2026-03-30 (~2 years of daily OHLCV)
-- **Total rows:** 22,922
-- **Rows per ticker (active):** 377–501 (CURB listed ~Sep 2024; all others have 501 rows)
-- **Data gaps:** 0 gaps ≥7 calendar days for any ticker
+- **Table**: `market_data`
+- **Target date range**: ~2 years of daily OHLCV ending 2026-04-01
+- **Ingestion script**: `data/run_universe_ingest.py`
 
-## Tickers Dropped
+Tickers carried over from the prior universe retain their existing data rows. The 129 new tickers were ingested at generation time. Some tickers may return no data from yfinance (delisted, halted, or recently listed) — the ingestion layer handles these gracefully.
 
-None dropped — 4/50 (8%) are insufficient, below the 20% threshold. They are present in `tickers.json` but contribute no rows to `market_data`. Downstream code should handle missing tickers gracefully (the ingestion layer already does).
+## Rebuilding
 
-Tickers with no data: AMED, CATS, COMM, COOP
+To regenerate this universe from scratch:
 
-## What's Available for Modeling
+```bash
+bash data/build_universe.sh
+python -m data.run_universe_ingest
+```
 
-All 46 active tickers have 377–501 rows of clean daily OHLCV data covering approximately 2024-04-01 through 2026-03-30. This is sufficient for feature engineering (technical indicators, rolling windows) and training a baseline classifier.
-
-The `data/universe.py` module exposes `load_universe()` which returns all 50 tickers from `data/tickers.json`. Filter against `market_data` for the active set.
+The build script downloads a fresh IWM holdings CSV, fetches current market caps from Yahoo Finance, and rewrites `tickers.json`. Re-running `run_universe_ingest` fetches OHLCV history for any new tickers.
