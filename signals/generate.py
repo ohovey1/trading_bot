@@ -18,15 +18,18 @@ _ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = _ROOT / "models"
 DB_PATH = str(_ROOT / "data" / "trading.db")
 
+# v1 is the production model; v2/v3 exist for comparison only.
+PRODUCTION_VERSION = "v1"
+
 
 def _load_model_with_version():
-    """Load the latest model pipeline and return (pipeline, version_string)."""
-    jsons = sorted(MODELS_DIR.glob("model_v*.json"))
-    if not jsons:
-        raise FileNotFoundError(f"No model metadata found in {MODELS_DIR}/")
-    with open(jsons[-1]) as f:
+    """Load the production model pipeline and return (pipeline, version_string)."""
+    json_path = MODELS_DIR / f"model_{PRODUCTION_VERSION}.json"
+    if not json_path.exists():
+        raise FileNotFoundError(f"Production model not found: {json_path}")
+    with open(json_path) as f:
         meta = json.load(f)
-    pipeline = registry.load_model()
+    pipeline = registry.load_model(version=PRODUCTION_VERSION)
     return pipeline, meta["version"]
 
 

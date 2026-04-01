@@ -2,12 +2,60 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from dashboard.utils.db import get_outcomes, get_backtest_summary
+from dashboard.utils.db import get_outcomes, get_backtest_summary, get_tickers
 
 st.title("Backtesting & Results")
 
+# --- How backtesting works ---
+st.subheader("How Backtesting Works")
+
+st.markdown("""
+The backtest replays the trained model over historical OHLCV data to simulate every
+buy signal it would have generated in the past. No live money is involved -- this is
+purely a retrospective exercise to measure whether the model has predictive value.
+
+**Simulated signal:** For each date in the historical dataset, the model scores each
+ticker using only the data available up to that date. Any ticker where the model's
+confidence score reaches 0.55 or higher generates a simulated buy signal at the
+closing price on that date.
+
+**Outcome determination:** Each simulated signal is resolved 10 trading days later
+using the actual closing price. If the close on day 10 is 3% or more above the entry
+price, the signal is a **win**. If it is more than 3% below, it is a **loss**.
+Everything in between is **neutral**.
+
+**Sharpe approximation:** The Sharpe ratio shown here is a rough estimate --
+`mean(returns) / std(returns)` -- computed over all signal returns. It does not
+annualize returns or use a risk-free rate. It is useful for comparing model versions
+against each other, not for comparison to published fund metrics.
+
+**Limitations to keep in mind:**
+
+- No transaction costs or slippage are modeled. Every signal is assumed to execute at
+  exactly the closing price.
+- Signals are resolved at a fixed 10-day horizon regardless of whether the target or
+  stop-loss was hit earlier.
+- Look-ahead bias is prevented by computing features only from data available on the
+  signal date, but survivorship bias may exist if delisted tickers are absent from the
+  historical data.
+""")
+
+st.info(
+    "Results shown for small-cap universe only ($300M-$2B market cap, "
+    "sourced from Russell 2000 constituents).",
+    icon="ℹ️",
+)
+
+st.divider()
+
 # --- Load data ---
+universe_tickers = set(get_tickers())
+
 outcomes_df = get_outcomes()
+
+# Filter to current universe tickers
+if not outcomes_df.empty and universe_tickers:
+    outcomes_df = outcomes_df[outcomes_df["ticker"].isin(universe_tickers)]
 
 # Fall back to simulation if outcomes table is empty
 if outcomes_df.empty:
@@ -18,10 +66,11 @@ if outcomes_df.empty:
         if not results:
             return pd.DataFrame()
         df = pd.DataFrame(results)
-        df = df.rename(columns={
-            "signal_date": "resolved_at",
-        })
+        df = df.rename(columns={"signal_date": "resolved_at"})
         df["pct_return"] = df["pct_return"] * 100
+        # Filter to universe
+        if universe_tickers:
+            df = df[df["ticker"].isin(universe_tickers)]
         return df
 
     outcomes_df = _run_simulation()
@@ -61,6 +110,11 @@ if not filtered.empty:
 # --- Summary metrics ---
 st.subheader("Summary Metrics")
 
+st.markdown(
+    "Aggregate performance across all simulated signals that pass the current filters. "
+    "Win rate and Sharpe are the primary indicators of model quality."
+)
+
 backtest = get_backtest_summary()
 
 if not filtered.empty:
@@ -95,7 +149,13 @@ if filtered.empty:
     st.stop()
 
 # --- Equity curve ---
-st.subheader("Equity Curve ($1,000/signal)")
+st.subheader("Equity Curve")
+
+st.markdown(
+    "Hypothetical cumulative P&L if $1,000 were allocated to each signal at entry price, "
+    "assuming every position was closed at the forward price 10 trading days later. "
+    "No transaction costs or slippage are included."
+)
 
 if "resolved_at" in filtered.columns and "pct_return" in filtered.columns:
     eq = filtered.sort_values("resolved_at").copy()
@@ -110,11 +170,15 @@ if "resolved_at" in filtered.columns and "pct_return" in filtered.columns:
     )
     st.plotly_chart(fig_eq, use_container_width=True)
 
-# --- Win/loss/neutral pie ---
+# --- Win/loss/neutral pie + per-ticker win rate ---
 col_left, col_right = st.columns(2)
 
 with col_left:
     st.subheader("Outcome Distribution")
+    st.markdown(
+        "Breakdown of all filtered signals by outcome. Neutral signals "
+        "returned between -3% and +3% over the 10-day hold period."
+    )
     outcome_counts = filtered["outcome"].value_counts().reset_index()
     outcome_counts.columns = ["outcome", "count"]
     color_map = {"win": "#2ecc71", "loss": "#e74c3c", "neutral": "#95a5a6"}
@@ -128,9 +192,12 @@ with col_left:
     )
     st.plotly_chart(fig_pie, use_container_width=True)
 
-# --- Per-ticker win rate bar ---
 with col_right:
     st.subheader("Win Rate by Ticker")
+    st.markdown(
+        "Win rate per ticker across all simulated signals. Tickers with very few "
+        "signals (1-2 total) may show extreme win rates that are not meaningful."
+    )
     ticker_stats = (
         filtered.groupby("ticker")
         .apply(lambda g: pd.Series({
@@ -153,6 +220,12 @@ with col_right:
 
 # --- Confidence vs. return scatter ---
 st.subheader("Confidence vs. Return")
+
+st.markdown(
+    "Each point is one simulated signal. A well-calibrated model would show higher "
+    "returns clustering at higher confidence scores. Flat or random dispersion "
+    "indicates the confidence threshold needs tuning."
+)
 
 if "confidence" in filtered.columns and "pct_return" in filtered.columns:
     hover_cols = [c for c in ["ticker", "resolved_at"] if c in filtered.columns]

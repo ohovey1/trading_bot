@@ -29,7 +29,7 @@ Two years of history are fetched on every daily ingest run to keep the table cur
 # --- Ticker universe ---
 st.subheader("Ticker Universe")
 
-DELISTED = {"AMED", "CATS", "COMM", "COOP"}
+DELISTED: set[str] = set()  # no known delisted tickers in the current small-cap universe
 
 coverage = get_ticker_coverage()
 all_tickers = get_tickers()
@@ -89,9 +89,6 @@ else:
 # --- Data quality notes ---
 st.subheader("Data Quality Notes")
 st.markdown("""
-- **Delisted tickers** — AMED, CATS, COMM, and COOP were in the original universe
-  but are no longer trading. They return no data from Yahoo Finance and are excluded
-  from feature engineering and signal generation.
 - **Adjusted closes** — Yahoo Finance returns split- and dividend-adjusted close prices.
   All model features and signal prices are based on adjusted closes.
 - **Missing days** — Market holidays and weekends produce no rows. The pipeline
